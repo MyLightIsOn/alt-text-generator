@@ -14,6 +14,14 @@ const seededQuestions = [
   "What is the setting or background?",
 ];
 
+type Grade = {
+  score: number;
+  issues: {
+    severity: string;
+    message: string;
+  }[];
+};
+
 export default function AltTextAssistant() {
   const [mode, setMode] = useState("image");
   const [image, setImage] = useState<string | null>(null);
@@ -22,6 +30,8 @@ export default function AltTextAssistant() {
   const [answer, setAnswer] = useState("");
   const [altText, setAltText] = useState("");
   const [textInput, setTextInput] = useState("");
+  const [userEdited, setUserEdited] = useState(false);
+  const [grade, setGrade] = useState<Grade | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -34,24 +44,68 @@ export default function AltTextAssistant() {
     }
   };
 
-  const handleAnswerSubmit = () => {
-    const updatedAltText = altText + " " + answer;
-    setAltText(updatedAltText.trim());
+  const generateAltText = async (inputText: string) => {
+    try {
+      const res = await fetch("/api/generate-alt-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: inputText }),
+      });
+      const data = await res.json();
+      setAltText(data.altText);
+      handleGradeText(data.altText);
+    } catch (error) {
+      console.error("Failed to generate alt text", error);
+    }
+  };
+
+  const handleAnswerSubmit = async () => {
+    const updatedText = altText + " " + answer;
     setAnswer("");
+    setUserEdited(false);
+
+    await generateAltText(updatedText.trim());
 
     if (questionIndex < seededQuestions.length - 1) {
       const nextIndex = questionIndex + 1;
       setQuestionIndex(nextIndex);
       setQuestion(seededQuestions[nextIndex]);
     } else {
-      // TODO: Replace with AI-generated follow-up question
-      setQuestion("Is there anything else important to describe?");
+      try {
+        const res = await fetch("/api/next-question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ altTextSoFar: updatedText.trim() }),
+        });
+        const data = await res.json();
+        setQuestion(
+          data.question || "Is there anything else important to describe?",
+        );
+      } catch (err) {
+        console.error(err);
+        setQuestion("Is there anything else important to describe?");
+      }
     }
   };
 
   const handleTextSubmit = () => {
     setAltText(textInput);
     setQuestion("What is the subject of the text?");
+    handleGradeText(textInput);
+  };
+
+  const handleGradeText = async (text: string) => {
+    try {
+      const res = await fetch("/api/grade-alt-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      setGrade(data);
+    } catch (error) {
+      console.error("Failed to grade alt text", error);
+    }
   };
 
   return (
@@ -105,15 +159,36 @@ export default function AltTextAssistant() {
       <Separator />
 
       <Card>
-        <CardContent className="space-y-2 p-4">
+        <CardContent className="space-y-4 p-4">
           <p className="font-semibold">Generated Alt Text:</p>
-          <Textarea value={altText} readOnly className="h-24" />
+          <Textarea
+            value={altText}
+            onChange={(e) => {
+              setAltText(e.target.value);
+              setUserEdited(true);
+            }}
+            className="h-24"
+          />
           <div className="space-x-2">
-            <Button onClick={() => {}}>Review Text</Button>
+            <Button onClick={() => handleGradeText(altText)}>
+              Review Text
+            </Button>
             <Button onClick={() => navigator.clipboard.writeText(altText)}>
               Copy
             </Button>
           </div>
+          {grade && (
+            <div className="mt-4">
+              <p className="font-medium">Score: {grade.score} / 5.0</p>
+              <ul className="list-disc list-inside">
+                {grade.issues.map((issue, idx) => (
+                  <li key={idx}>
+                    <strong>{issue.severity}:</strong> {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
