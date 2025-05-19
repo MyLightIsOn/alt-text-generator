@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Check } from "lucide-react";
 
 const seededQuestions = [
   "What is the subject of the image?",
@@ -31,6 +32,7 @@ export default function AltTextAssistant() {
   const [altText, setAltText] = useState("");
   const [textInput, setTextInput] = useState("");
   const [grade, setGrade] = useState<Grade | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -106,6 +108,16 @@ export default function AltTextAssistant() {
     }
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(altText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">Alt Text Assistant</h1>
@@ -170,8 +182,8 @@ export default function AltTextAssistant() {
             <Button onClick={() => handleGradeText(altText)}>
               Review Text
             </Button>
-            <Button onClick={() => navigator.clipboard.writeText(altText)}>
-              Copy
+            <Button onClick={handleCopy}>
+              {copied ? <Check className="w-4 h-4" /> : "Copy"}
             </Button>
           </div>
           {grade && (
