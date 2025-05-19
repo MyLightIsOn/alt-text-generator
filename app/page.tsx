@@ -30,7 +30,6 @@ export default function AltTextAssistant() {
   const [answer, setAnswer] = useState("");
   const [altText, setAltText] = useState("");
   const [textInput, setTextInput] = useState("");
-  const [userEdited, setUserEdited] = useState(false);
   const [grade, setGrade] = useState<Grade | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +61,6 @@ export default function AltTextAssistant() {
   const handleAnswerSubmit = async () => {
     const updatedText = altText + " " + answer;
     setAnswer("");
-    setUserEdited(false);
 
     await generateAltText(updatedText.trim());
 
@@ -165,7 +163,6 @@ export default function AltTextAssistant() {
             value={altText}
             onChange={(e) => {
               setAltText(e.target.value);
-              setUserEdited(true);
             }}
             className="h-24"
           />
