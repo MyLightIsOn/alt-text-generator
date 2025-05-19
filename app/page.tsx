@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 const seededQuestions = [
   "What is the subject of the image?",
@@ -33,6 +33,7 @@ export default function AltTextAssistant() {
   const [textInput, setTextInput] = useState("");
   const [grade, setGrade] = useState<Grade | null>(null);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -46,6 +47,8 @@ export default function AltTextAssistant() {
   };
 
   const generateAltText = async (inputText: string) => {
+    setLoading(true);
+
     try {
       const res = await fetch("/api/generate-alt-text", {
         method: "POST",
@@ -57,6 +60,8 @@ export default function AltTextAssistant() {
       handleGradeText(data.altText);
     } catch (error) {
       console.error("Failed to generate alt text", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,7 +155,13 @@ export default function AltTextAssistant() {
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
             />
-            <Button onClick={handleAnswerSubmit}>Submit Answer</Button>
+            <Button onClick={handleAnswerSubmit} disabled={loading}>
+              {loading ? (
+                <Loader2 className="animate-spin w-4 h-4" />
+              ) : (
+                "Generate Text"
+              )}
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -178,7 +189,7 @@ export default function AltTextAssistant() {
             }}
             className="h-24"
           />
-          <div className="space-x-2">
+          <div className="space-x-2 flex items-center">
             <Button onClick={() => handleGradeText(altText)}>
               Review Text
             </Button>
